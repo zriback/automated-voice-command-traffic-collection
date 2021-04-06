@@ -18,7 +18,7 @@ sudo cp ./etc/dhcpcd.conf /etc/dhcpcd.conf
 sudo systemctl enable systemd-networkd
 
 # Install flite software and download extra voices
-sudo apt-get -y install festival
+sudo apt-get -y install flite
 
 mkdir -p voices
 FLITE_VOICES=http://www.festvox.org/flite/packed/flite-2.0/voices/
