@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# For ALL command directories in full_dataset
-# Rename all outXXXX PCAP files to outXXXX PCAP files
-# Rename all outXXXX WAV files to outXXXX WAV files
+# NOTE: execute this script within your full_dataset directory (PWD=/home/pi/full_dataset)
+
+# For all CHILD directories:
+# Rename all outXXXX PCAP files to numerically-ordered outXXXX PCAP files
+# Rename all outXXXX WAV files to numerically-ordered outXXXX WAV files
 
 for dir in $(ls -d */); do
   i=0

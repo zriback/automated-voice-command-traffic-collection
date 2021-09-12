@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# For ALL command directories in full_dataset
+# NOTE: execute this script within your full_dataset directory (PWD=/home/pi/full_dataset)
+
+# For all CHILD directories:
 # Rename all cmuXXX PCAP files to outXXXX PCAP files
 
 for dir in $(ls -d */); do

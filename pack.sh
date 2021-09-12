@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# For ALL command directories in current_dataset
-# Pack all directories into compressed zip files
+# NOTE: execute this script within your full_dataset directory (PWD=/home/pi/full_dataset)
+
+# For all CHILD directories:
+# Pack all directories into compressed ZIP files
 
 rm *.zip
 
