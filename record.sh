@@ -11,50 +11,35 @@ clean_exit() {
 voices=(cmu_us_aew cmu_us_awb cmu_us_bdl cmu_us_clb cmu_us_fem cmu_us_gka cmu_us_jmk cmu_us_ksp cmu_us_ljm cmu_us_rms cmu_us_rxr cmu_us_slt)
 #voices=(cmu_us_awb)
 
-# Prompt for data directory paths
-while read -p "Enter the dataset directory [current_dataset]: " dataset_dir && dataset_dir=${dataset_dir:-current_dataset} && [ ! -d $dataset_dir ]; do
+# Prompt for directory containing all wav input
+while read -p "Enter the wav directory [./wav_output]: " wav_dir && wav_dir=${wav_dir:-./wav_output} && [ ! -d $wav_dir ]; do
   echo "Directory doesn't exist"
 done
-echo -e "Using directory $dataset_dir\n"
-while read -p "Enter the command directory [$dataset_dir/commands]: " command_dir && command_dir=${command_dir:-$dataset_dir/commands} && [ ! -d $command_dir ]; do
-  echo "Directory doesn't exist"
-done
-echo -e "Using directory $command_dir\n"
-while read -p "Enter the wake word directory [$dataset_dir/wake_words]: " wake_word_dir && wake_word_dir=${wake_word_dir:-$dataset_dir/wake_words} && [ ! -d $wake_word_dir ]; do
-  echo "Directory doesn't exist"
-done
-echo -e "Using directory $wake_word_dir\n"
+echo -e "Using directory $wav_dir\n"
 
-# Prompt for command subdirectory
-PS3="Select the command subdirectory to use: "
-select command_subdirs in $command_dir/* "ALL"; do
-  case $command_subdirs in
-  ALL)
-    command_subdirs=$command_dir/*
-    echo -e "Using ALL subdirectories\n"
-    break
-    ;;
-  *)
-    echo -e "Using subdirectory $command_subdirs\n"
-    break
-    ;;
-  esac
+# Prompt for wake word wav file
+while read -p "Enter the the wake word wav file [./wake_word.wav]: " wake_word && wake_word=${wake_word:-./wake_word.wav} && [ ! -f $wake_word ]; do
+  echo "File does not exist"
 done
-
-# Prompt for wake word file
-PS3="Select the wake word file to use: "
-select wake_word_file in $wake_word_dir/*; do
-  case $wake_word_file in
-  *)
-    echo -e "Using file $wake_word_file\n"
-    break
-    ;;
-  esac
-done
+echo -e "Using file $wake_word\n"
 
 read -p "Enter the IP address of the device [192.168.1.2]: " ip_addr
 ip_addr=${ip_addr:-192.168.1.2}
 echo -e "Using address $ip_addr\n"
+
+
+# For each wav variant for each voice variant for each command
+for command_dir in $wav_dir/*; do
+  for voice_dir in $command_dir/*; do
+    for wav_file in $voice_dir/*; do
+      echo -e "Now doing: $wav_file"
+
+
+    done
+  done
+done
+
+
 
 # For each voice
 for voice in ${voices[@]}; do
@@ -92,3 +77,5 @@ for voice in ${voices[@]}; do
     sudo chown $USER:$USER "$command_subdir/"* # Fix ownership of files
   done
 done
+
+
