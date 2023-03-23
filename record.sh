@@ -23,58 +23,58 @@ while read -p "Enter the the wake word wav file [./wake_word.wav]: " wake_word &
 done
 echo -e "Using file $wake_word\n"
 
+out_dir="./capture_output"
+echo -e "Using output directory $out_dir\n"
+
+# clear that directory if it exists
+if [ -d $out_dir ]; then
+  rm -rf $out_dir
+fi
+mkdir $out_dir
+
 read -p "Enter the IP address of the device [192.168.1.2]: " ip_addr
 ip_addr=${ip_addr:-192.168.1.2}
 echo -e "Using address $ip_addr\n"
 
+# Define interface to capture on
+interface=eth0
+
+# Define time to capture for each individual command
+cap_time=10
+
 
 # For each wav variant for each voice variant for each command
 for command_dir in $wav_dir/*; do
+  command=$(echo $command_dir | cut -d'/' -f 3)
   for voice_dir in $command_dir/*; do
+    voice=$(echo $voice_dir | cut -d'/' -f 4)
     for wav_file in $voice_dir/*; do
-      echo -e "Now doing: $wav_file"
+      wav=$(echo $wav_file | cut -d'/' -f 5 | cut -d'.' -f 1)
+      # $wav_file now contains the full path to the .wav file
+      echo -e "Now capturing: $wav_file"
+      
+      current_out_subdir=$out_dir/$command/$voice
+      mkdir -p $current_out_subdir 2>/dev/null
+      sudo tcpdump -U -i $interface -w $current_out_subdir/$wav.pcap "host $ip_addr" &
+      paplay $wake_word
+      paplay $wav_file
 
-
-    done
-  done
-done
-
-
-
-# For each voice
-for voice in ${voices[@]}; do
-  # For each command subdirectory
-  for command_subdir in ${command_subdirs[@]}; do
-    sudo rm "$command_subdir/${voice}_out"* # Delete stale output files of current voice in current command subdirectory
-    variant=1 # Reset voice variant counter of current voice
-
-    # For each variant file of current voice in current command subdirectory
-    for variant_file in $command_subdir/${voice}_in*; do
-      # Start the capture
-      echo -e "\nCapturing $command_subdir/${voice}_out$(printf '%03d' $variant).pcap\n"
-      sudo tcpdump -U -i wlan0 -w $command_subdir/${voice}_out$(printf "%03d" $variant).pcap "host $ip_addr" &
-      paplay $wake_word_file
-      paplay $variant_file
-
-      # If the capture times out (no response heard after 60 seconds), then redo the capture
-      while ! timeout --foreground 60s sox -d $command_subdir/${voice}_out$(printf "%03d" $variant).wav silence 1 0.1 5% 1 3.0 5%; do
-        # Clean up from failed capture
-        sudo pkill -2 tcpdump
-        sudo rm "$command_subdir/${voice}_out$(printf "%03d" $variant)"*
-
-        # Start the redo capture
-        echo -e "\nCapturing $command_subdir/${voice}_out$(printf '%03d' $variant).pcap\n"
-        sudo tcpdump -U -i wlan0 -w $command_subdir/${voice}_out$(printf "%03d" $variant).pcap "host $ip_addr" &
-        paplay $wake_word_file
-        paplay $variant_file
+      while ! timeout --foreground 60s sox -d $wav_file silence 0.1 5% 1 3.0 5%; do
+        # Clean up failed capture
+	sudo pkill -2 tcpdump
+	sudo rm $current_out_dir/$wav.pcap
+	
+	# Start the redo capture
+	echo -e "Error...retrying capture"
+	sudo tcpdump -U -i $interface -w $current_out_subdir/$wav.pcap "host $ip_addr" &
+        paplay $wake_word
+        paplay $wav_file
       done
 
-      sleep 2
+      sleep $cap_time
       sudo pkill -2 tcpdump
-      ((variant++))
+      echo -e "--------------------------------------------\n"
     done
-
-    sudo chown $USER:$USER "$command_subdir/"* # Fix ownership of files
   done
 done
 
