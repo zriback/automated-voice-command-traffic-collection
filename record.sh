@@ -7,10 +7,6 @@ clean_exit() {
   exit 1
 }
 
-#voices=(cmu_us_aew cmu_us_ahw cmu_us_aup cmu_us_awb cmu_us_axb cmu_us_bdl cmu_us_clb cmu_us_eey cmu_us_fem cmu_us_gka cmu_us_jmk cmu_us_ksp cmu_us_ljm cmu_us_rms cmu_us_rxr cmu_us_slt)
-voices=(cmu_us_aew cmu_us_awb cmu_us_bdl cmu_us_clb cmu_us_fem cmu_us_gka cmu_us_jmk cmu_us_ksp cmu_us_ljm cmu_us_rms cmu_us_rxr cmu_us_slt)
-#voices=(cmu_us_awb)
-
 # Prompt for directory containing all wav input
 while read -p "Enter the wav directory [./wav_output]: " wav_dir && wav_dir=${wav_dir:-./wav_output} && [ ! -d $wav_dir ]; do
   echo "Directory doesn't exist"
@@ -40,41 +36,47 @@ echo -e "Using address $ip_addr\n"
 interface=eth0
 
 # Define time to capture for each individual command
-cap_time=10
+cap_time=2
 
+# Defines number of times to capture for each command
+iterations=2
 
-# For each wav variant for each voice variant for each command
+# for each command for each wav file
 for command_dir in $wav_dir/*; do
   command=$(echo $command_dir | cut -d'/' -f 3)
-  for voice_dir in $command_dir/*; do
-    voice=$(echo $voice_dir | cut -d'/' -f 4)
-    for wav_file in $voice_dir/*; do
-      wav=$(echo $wav_file | cut -d'/' -f 5 | cut -d'.' -f 1)
-      # $wav_file now contains the full path to the .wav file
-      echo -e "Now capturing: $wav_file"
-      
-      current_out_subdir=$out_dir/$command/$voice
-      mkdir -p $current_out_subdir 2>/dev/null
-      sudo tcpdump -U -i $interface -w $current_out_subdir/$wav.pcap "host $ip_addr" &
-      paplay $wake_word
-      paplay $wav_file
+  for ((i=1; i <= $iterations; i++)); do
+    # select random file from the command sub dir
+    wav_name=$(ls $command_dir | shuf -n 1) 
+    wav_file=$command_dir/$wav_name
+    # $wav_file now contains the full path to the .wav file
+    # $wav_name contains the name of the file without the path
+    
+    echo -e "Now capturing: $wav_file"
+    
+    current_out_subdir=$out_dir/$command
+    
+    # make the directory if it does not exist
+    mkdir -p $current_out_subdir 2>/dev/null
+    
+    sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
+    paplay $wake_word
+    paplay $wav_file
 
-      while ! timeout --foreground 60s sox -d $wav_file silence 0.1 5% 1 3.0 5%; do
-        # Clean up failed capture
-	sudo pkill -2 tcpdump
-	sudo rm $current_out_dir/$wav.pcap
-	
-	# Start the redo capture
-	echo -e "Error...retrying capture"
-	sudo tcpdump -U -i $interface -w $current_out_subdir/$wav.pcap "host $ip_addr" &
-        paplay $wake_word
-        paplay $wav_file
-      done
-
-      sleep $cap_time
+    while ! timeout --foreground 60s sox -d $wav_file silence 0.1 5% 1 3.0 5%; do
+      # Clean up failed capture
       sudo pkill -2 tcpdump
-      echo -e "--------------------------------------------\n"
+      sudo rm $current_out_dir/$wav.pcap
+
+      # Start the redo capture
+        echo -e "Error...retrying capture"
+	sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
+	paplay $wake_word
+	paplay $wav_file
     done
+    sleep $cap_time
+    sudo pkill -2 tcpdump
+    echo -e "Saved as $current_out_subdir/cap_$i.pcap"
+    echo -e "--------------------------------------------\n"
   done
 done
 
