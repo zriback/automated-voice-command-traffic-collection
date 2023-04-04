@@ -33,10 +33,10 @@ ip_addr=${ip_addr:-192.168.1.2}
 echo -e "Using address $ip_addr\n"
 
 # Define interface to capture on
-interface=eth0
+interface=wlan0
 
 # Define time to capture for each individual command
-cap_time=2
+cap_time=10
 
 # Defines number of times to capture for each command
 iterations=2
@@ -57,9 +57,11 @@ for command_dir in $wav_dir/*; do
     
     # make the directory if it does not exist
     mkdir -p $current_out_subdir 2>/dev/null
+   
     
-    sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
     paplay $wake_word
+    sleep 1
+    sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
     paplay $wav_file
 
     while ! timeout --foreground 60s sox -d $wav_file silence 0.1 5% 1 3.0 5%; do
@@ -69,8 +71,9 @@ for command_dir in $wav_dir/*; do
 
       # Start the redo capture
         echo -e "Error...retrying capture"
-	sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
 	paplay $wake_word
+	sleep 1
+	sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
 	paplay $wav_file
     done
     sleep $cap_time
