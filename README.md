@@ -24,7 +24,7 @@ File containing the voice commands is also provided by the user. An example voic
 
 ### record.sh
 
-Plays a .wav sound file a set amount of times for each command (amount of times is defined in the script as $iterations) and records tcp traffic for a set amount of time to give the voice command time to process by the voice assistant. Specific file (combination of voice and variant) is selected at random for each iteration.
+Plays a .wav sound file a set amount of times for each command (amount of times is defined in the script as $iterations) and records tcp traffic for a set amount of time to give the voice command time to process by the voice assistant. Specific file (combination of voice and variant) is selected at random for each iteration. Also records voice assistant output as a .wav file in the capture output directory.
 
 Directory containing .wav files generated using generate.sh is provided by the user.
 
