@@ -28,8 +28,8 @@ if [ -d $out_dir ]; then
 fi
 mkdir $out_dir
 
-read -p "Enter the IP address of the device [192.168.1.2]: " ip_addr
-ip_addr=${ip_addr:-192.168.1.2}
+read -p "Enter the IP address of the device [10.163.3.12]: " ip_addr
+ip_addr=${ip_addr:-10.163.3.12}
 echo -e "Using address $ip_addr\n"
 
 # Define interface to capture on
@@ -39,7 +39,7 @@ interface=wlan0
 cap_time=10
 
 # Defines number of times to capture for each command
-iterations=2
+iterations=1
 
 # for each command for each wav file
 for command_dir in $wav_dir/*; do
@@ -63,24 +63,18 @@ for command_dir in $wav_dir/*; do
     sleep 1
     sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
     paplay $wav_file
-
-    while ! timeout --foreground 60s sox -d $wav_file silence 0.1 5% 1 3.0 5%; do
-      # Clean up failed capture
-      sudo pkill -2 tcpdump
-      sudo rm $current_out_dir/$wav.pcap
-
-      # Start the redo capture
-        echo -e "Error...retrying capture"
-	paplay $wake_word
-	sleep 1
-	sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
-	paplay $wav_file
-    done
+    
+    sudo sox -t alsa hw:1,0 $current_out_subdir/cap_$i.wav &
+    
     sleep $cap_time
     sudo pkill -2 tcpdump
-    echo -e "Saved as $current_out_subdir/cap_$i.pcap"
+    sudo pkill -2 sox
+    echo -e "Saved as $current_out_subdir/cap_$i"
     echo -e "--------------------------------------------\n"
   done
 done
 
+sudo pkill -2 tcpdump
+sudo pkill -2 sox 
 
+exit
