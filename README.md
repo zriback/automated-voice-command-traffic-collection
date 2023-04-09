@@ -33,3 +33,7 @@ Directory containing .wav files generated using generate.sh is provided by the u
 IP address of the phone is provided by the user. This is so the script can only capture traffic to do with the target device
 
 Output directory is 'capture_output' and has similar structure as wav_output but with corresponding pcap files.
+
+### fix_wav.sh
+
+Goes through every output .wav file in the given directory (./capture_output) and fixes the file. This includes lowering the volume a bit, and removing silence from the beginning and end of the recording.
