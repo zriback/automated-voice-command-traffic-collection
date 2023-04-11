@@ -19,14 +19,14 @@ while read -p "Enter the the wake word wav file [./wake_word.wav]: " wake_word &
 done
 echo -e "Using file $wake_word\n"
 
-out_dir="./capture_output"
-echo -e "Using output directory $out_dir\n"
+# Prompt for the capture output directory
+while read -p "Enter the capture output directory [./capture_output]: " out_dir && out_dir=${out_dir:-./capture_output} && [ ! -d $out_dir ]; do
+  echo "Directory does not exist"
+done
+echo -e "Using directory $out_dir\n"
 
 # clear that directory if it exists
-if [ -d $out_dir ]; then
-  rm -rf $out_dir
-fi
-mkdir $out_dir
+rm -rf $out_dir/*
 
 read -p "Enter the IP address of the device [10.163.3.12]: " ip_addr
 ip_addr=${ip_addr:-10.163.3.12}
@@ -39,7 +39,7 @@ interface=wlan0
 cap_time=10
 
 # Defines number of times to capture for each command
-iterations=1
+iterations=2
 
 # for each command for each wav file
 for command_dir in $wav_dir/*; do
@@ -61,15 +61,16 @@ for command_dir in $wav_dir/*; do
     
     paplay $wake_word
     sleep 1
-    sudo tcpdump -U -i $interface -w $current_out_subdir/cap_$i.pcap "host $ip_addr" &
+    sudo tcpdump -U -i $interface -w $current_out_subdir/cap$i.pcap "host $ip_addr" &
     paplay $wav_file
     
-    sudo sox -t alsa hw:1,0 $current_out_subdir/cap_$i.wav &
+    # sudo sox -t alsa hw:1,0 $current_out_subdir/cap_$i.wav &
+    sox -t alsa -d $current_out_subdir/cap$i.wav &
     
     sleep $cap_time
     sudo pkill -2 tcpdump
     sudo pkill -2 sox
-    echo -e "Saved as $current_out_subdir/cap_$i"
+    echo -e "Saved as $current_out_subdir/cap$i"
     echo -e "--------------------------------------------\n"
   done
 done

@@ -12,7 +12,7 @@ for command_dir in $cap_dir/*; do
     
     echo Fixing $wav
     # Get temporary name for the file. Original name will be returned to later
-    temp_name=.$(echo $wav | rev | cut -d'.' -f 2 | rev)_trimmed.wav
+    temp_name=$(echo $wav | rev | cut -d'.' -f 2- | rev)_trimmed.wav
     
     # Remove silence from both ends
     sox $wav $temp_name silence 1 0.1 20% reverse silence 1 0.1 20% reverse 
