@@ -35,11 +35,8 @@ echo -e "Using address $ip_addr\n"
 # Define interface to capture on
 interface=wlan0
 
-# Define time to capture for each individual command
-cap_time=10
-
 # Defines number of times to capture for each command
-iterations=2
+iterations=200
 
 # for each command for each wav file
 for command_dir in $wav_dir/*; do
@@ -65,11 +62,10 @@ for command_dir in $wav_dir/*; do
     paplay $wav_file
     
     # sudo sox -t alsa hw:1,0 $current_out_subdir/cap_$i.wav &
-    sox -t alsa -d $current_out_subdir/cap$i.wav &
-    
-    sleep $cap_time
+    # sox -t alsa -d $current_out_subdir/cap$i.wav &
+    timeout 25s rec $current_out_subdir/cap$i.wav rate 32k gain -10 silence 2 1 20% 1 1.0 2%
+
     sudo pkill -2 tcpdump
-    sudo pkill -2 sox
     echo -e "Saved as $current_out_subdir/cap$i"
     echo -e "--------------------------------------------\n"
   done
