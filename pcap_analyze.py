@@ -38,7 +38,6 @@ for i in range(len(packets)):
     
     packet_times.append(float(packet.time))
     
-    print(packet["IP"].src)
     if packet["IP"].src == ip:  # outgoing (0)
         packet_directions.append(0)
     else:  # incoming (1)
@@ -55,12 +54,13 @@ for i in range(len(packets)):
         packet_iats.append(-1)
 
 # Print out lists
+print("packet sizes:")
 print(packet_sizes)
-print()
+print("packet iats")
 print(packet_iats)
-print()
+print("packet times")
 print(packet_times)
-print()
+print("packet directions")
 print(packet_directions)
 
 # Change lists into numpy arrays for further analysis later
@@ -69,3 +69,6 @@ iat_array = np.array(packet_iats)
 time_array = np.array(packet_times)
 dir_array = np.array(packet_directions)
 
+stacked_array = np.dstack((time_array, iat_array, size_array, dir_array))
+
+print(stacked_array)
