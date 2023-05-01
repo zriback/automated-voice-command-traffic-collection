@@ -3,6 +3,7 @@
 from scapy.all import rdpcap
 import numpy as np
 import os
+import pickle
 
 # Get info from user
 def get_input():
@@ -16,7 +17,11 @@ def get_input():
     while not os.path.isdir(data := input("Enter the directory for the capture output data [./capture_output]: ")):
         print("Directory does not exist")
     print("Using", data, "\n")
-    return ip, data
+    
+    while not os.path.isdir(pickle_output := input("Enter the directory for the pickle output [./pickle_output]: ")):
+        print("Directory does not exist")
+    print("Using", pickle_output, "\n")
+    return ip, data, pickle_output
 
 
 # analyze given pcap file through the ip given
@@ -77,14 +82,34 @@ def analyze_data(data, ip):
 
     return all_stats, y, questions
 
-def main():
-    ip, data = get_input()
 
-    all_stats, y, questions = analyze_data(data, ip)
-    print(all_stats)
-    print(y)
-    print(len(all_stats))
-    print(len(y))
+# pickle the necessary structures so they can be easily transfered over to where ML/DL is done
+# takes pickle_output directory and then X, y, and q to pickle
+def do_pickle(out_dir, X, y, q):
+    XObj = open(out_dir+"/X.obj", "wb")
+    yObj = open(out_dir+"/y.obj", "wb")
+    qObj = open(out_dir+"/q.obj", "wb")
+    
+    pickle.dump(X, XObj)
+    pickle.dump(y, yObj)
+    pickle.dump(q, qObj)
+
+    XObj.close()
+    yObj.close()
+    qObj.close()
+
+
+def main():
+    ip, data, pickle_output = get_input()
+
+    X, y, questions = analyze_data(data, ip)
+    # print(X)
+    # print(y)
+    # print(questions)
+
+    do_pickle(pickle_output, X, y, questions)
+    
 
 main()
+
 
