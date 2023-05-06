@@ -60,7 +60,7 @@ def analyze_pcap(pcap_file, ip):
 
 # analyze data directory
 def analyze_data(data, ip):
-    all_stats = []
+    X = []
     # store targets
     y = []
     # dict to store questions and id
@@ -77,10 +77,10 @@ def analyze_data(data, ip):
                 next_target += 1
             
             features = analyze_pcap(path, ip)
-            all_stats.append(features)
+            X.append(features)
             y.append(questions[question_dir])
-
-    return all_stats, y, questions
+    
+    return X, y, questions
 
 
 # pickle the necessary structures so they can be easily transfered over to where ML/DL is done
@@ -98,14 +98,30 @@ def do_pickle(out_dir, X, y, q):
     yObj.close()
     qObj.close()
 
+# make proper ndarray from multidimensional lists
+def make_ndarray(X, y):
+    y_array = np.array(y)
+    
+    # Find max number of packets in one of the captures
+    max_length = max(len(x) for x in X)
+    for capture in X:
+        padding = max_length - len(capture)
+        if padding > 0:
+            for _ in range(padding):
+                capture.append([0,0,0])
+    # Now x has correct dimensions
+    X_array = np.array(X)
+    
+    return X, y
 
 def main():
     ip, data, pickle_output = get_input()
 
     X, y, questions = analyze_data(data, ip)
-    # print(X)
-    # print(y)
-    # print(questions)
+    
+    # analyze_data() returns as lists, so need to make into ndarray
+    # involves making all elements in each dimension the same length
+    X, y = make_ndarray(X, y)
 
     do_pickle(pickle_output, X, y, questions)
     
