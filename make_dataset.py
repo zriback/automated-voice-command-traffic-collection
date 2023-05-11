@@ -8,10 +8,12 @@ import pickle
 # Get info from user
 def get_input():
     # Get input from user for phone IP address
-    ip = input("Enter the IP for the phone [10.163.3.12]: ")
-    if ip == "":
-        ip = "10.163.3.12"
-    print("Using", ip, "\n")
+    ip_input = input("Enter the IP for the phone. If there are multiple, separate them with a space. [10.163.3.12]: ")
+    if ip_input == "":
+        ip_input = "10.163.3.12"
+    ip_list = ip_input.split(" ")
+    print("Using ", end="")
+    print(list(ip for ip in ip_list))
 
     # Get input from the user for capture_output directory
     while not os.path.isdir(data := input("Enter the directory for the capture output data [./capture_output]: ")):
@@ -21,11 +23,11 @@ def get_input():
     while not os.path.isdir(pickle_output := input("Enter the directory for the pickle output [./pickle_output]: ")):
         print("Directory does not exist")
     print("Using", pickle_output, "\n")
-    return ip, data, pickle_output
+    return ip_list, data, pickle_output
 
 
 # analyze given pcap file through the ip given
-def analyze_pcap(pcap_file, ip):
+def analyze_pcap(pcap_file, ip_list):
     # Read in the PCAP file using Scapy
     packets = rdpcap(pcap_file)
 
@@ -38,8 +40,7 @@ def analyze_pcap(pcap_file, ip):
         # Get the size of the packet
         size = len(packet)
 
-        
-        if packet.haslayer("IP") and packet["IP"].src == ip:  # outgoing (1)
+        if packet.haslayer("IP") and packet["IP"].src in ip_list:  # outgoing (1)
             direction = 1
         else:  # incoming (-1)
             direction = -1
@@ -59,7 +60,7 @@ def analyze_pcap(pcap_file, ip):
 
 
 # analyze data directory
-def analyze_data(data, ip):
+def analyze_data(data, ip_list):
     X = []
     # store targets
     y = []
@@ -67,6 +68,7 @@ def analyze_data(data, ip):
     questions = {}
     next_target = 0
     for question_dir in os.listdir(data):
+        print("Analyzing", question_dir)
         for pcap in os.listdir(os.path.join(data, question_dir)):
             path = os.path.join(data, question_dir, pcap)
             if not path.endswith(".pcap"):
@@ -76,7 +78,7 @@ def analyze_data(data, ip):
                 questions[question_dir] = next_target
                 next_target += 1
             
-            features = analyze_pcap(path, ip)
+            features = analyze_pcap(path, ip_list)
             X.append(features)
             y.append(questions[question_dir])
     
@@ -86,6 +88,7 @@ def analyze_data(data, ip):
 # pickle the necessary structures so they can be easily transfered over to where ML/DL is done
 # takes pickle_output directory and then X, y, and q to pickle
 def do_pickle(out_dir, X, y, q):
+    print("Pickling objects...")
     XObj = open(out_dir+"/X.obj", "wb")
     yObj = open(out_dir+"/y.obj", "wb")
     qObj = open(out_dir+"/q.obj", "wb")
@@ -100,6 +103,7 @@ def do_pickle(out_dir, X, y, q):
 
 # make proper ndarray from multidimensional lists
 def make_ndarray(X, y):
+    print("Making into proper ndarray...")
     y_array = np.array(y)
     
     # Find max number of packets in one of the captures
@@ -112,20 +116,18 @@ def make_ndarray(X, y):
     # Now x has correct dimensions
     X_array = np.array(X)
     
-    return X, y
+    return X_array, y_array
 
 def main():
-    ip, data, pickle_output = get_input()
+    ip_list, data, pickle_output = get_input()
 
-    X, y, questions = analyze_data(data, ip)
+    X, y, questions = analyze_data(data, ip_list)
     
     # analyze_data() returns as lists, so need to make into ndarray
     # involves making all elements in each dimension the same length
     X, y = make_ndarray(X, y)
 
     do_pickle(pickle_output, X, y, questions)
-    
 
 main()
-
 
