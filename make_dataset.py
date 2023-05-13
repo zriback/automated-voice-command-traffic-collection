@@ -5,6 +5,8 @@ import numpy as np
 import os
 import pickle
 
+QUESTION_BUFFER_SIZE = 1
+
 # Get info from user
 def get_input():
     # Get input from user for phone IP address
@@ -60,13 +62,21 @@ def analyze_pcap(pcap_file, ip_list):
 
 
 # analyze data directory
-def analyze_data(data, ip_list):
+def analyze_data(data, ip_list, pickle_output):
     X = []
     # store targets
     y = []
     # dict to store questions and id
     questions = {}
     next_target = 0
+
+    # find max length (# of packets) of any capture in the data set
+    print("Finding max length of data captures...")
+    max_length = find_max_length(data)
+    print("Max length is", max_length)
+
+    # no. of questions in the current buffer - flushed to .obj file after QUESTION_BUFFER_SIZE questions are read
+    question_buf = 0
     for question_dir in os.listdir(data):
         print("Analyzing", question_dir)
         for pcap in os.listdir(os.path.join(data, question_dir)):
@@ -81,33 +91,60 @@ def analyze_data(data, ip_list):
             features = analyze_pcap(path, ip_list)
             X.append(features)
             y.append(questions[question_dir])
-    
+        question_buf += 1
+        # After analyzing set number of questions, append to pickled object and clear the buffer
+        if question_buf >= QUESTION_BUFFER_SIZE:
+            save_X_data(X, pickle_output, max_length)
+            question_buf = 0
+            X = []
+
+    # pickle remaining data in the buffer to the object file
+    if question_buf > 0:
+        save_X_data(X, pickle_output, max_length)
+
     return X, y, questions
 
+# Format X data into proper ndarray and pickle to .obj file
+def save_X_data(X, pickle_output, max_length):
+    X = make_ndarray(X, max_length)
+    do_pickle(pickle_output, X, None, None)
+
+
+# find max length (# of packets) of any capture in the data set
+def find_max_length(data):
+    max_length = 0
+    for question_dir in os.listdir(data):
+        for pcap in os.listdir(os.path.join(data, question_dir)):
+            path = os.path.join(data, question_dir, pcap)
+            if not path.endswith(".pcap"):
+                continue
+            if len(rdpcap(path)) > max_length:
+                max_length = len(rdpcap(path))
+    return max_length
+            
 
 # pickle the necessary structures so they can be easily transfered over to where ML/DL is done
 # takes pickle_output directory and then X, y, and q to pickle
-def do_pickle(out_dir, X, y, q):
-    print("Pickling objects...")
-    XObj = open(out_dir+"/X.obj", "wb")
-    yObj = open(out_dir+"/y.obj", "wb")
-    qObj = open(out_dir+"/q.obj", "wb")
-    
-    pickle.dump(X, XObj)
-    pickle.dump(y, yObj)
-    pickle.dump(q, qObj)
+# if a value is none, then nothing is done to that Obj file
+def do_pickle(out_dir, X=None, y=None, q=None):
+    if X is not None:
+        with open(out_dir+"/X.obj", "+ab") as XObj:
+            pickle.dump(X, XObj)
+            XObj.close()
 
-    XObj.close()
-    yObj.close()
-    qObj.close()
+    if y is not None:
+        with open(out_dir+"/y.obj", "+ab") as yObj:
+            pickle.dump(y, yObj)
+            yObj.close()
+
+    if q is not None:
+        with open(out_dir+"/q.obj", "+ab") as qObj:
+            pickle.dump(q, qObj)
+            qObj.close()
+    
 
 # make proper ndarray from multidimensional lists
-def make_ndarray(X, y):
-    print("Making into proper ndarray...")
-    y_array = np.array(y)
-    
-    # Find max number of packets in one of the captures
-    max_length = max(len(x) for x in X)
+def make_ndarray(X, max_length):
     for capture in X:
         padding = max_length - len(capture)
         if padding > 0:
@@ -115,19 +152,20 @@ def make_ndarray(X, y):
                 capture.append([0,0,0])
     # Now x has correct dimensions
     X_array = np.array(X)
-    
-    return X_array, y_array
+    return X_array
+
 
 def main():
     ip_list, data, pickle_output = get_input()
 
-    X, y, questions = analyze_data(data, ip_list)
+    # analyzes data, and puts into 
+    X, y, questions = analyze_data(data, ip_list, pickle_output)
     
-    # analyze_data() returns as lists, so need to make into ndarray
-    # involves making all elements in each dimension the same length
-    X, y = make_ndarray(X, y)
+    y = np.array(y)
 
-    do_pickle(pickle_output, X, y, questions)
+    do_pickle(pickle_output, None, y, questions)
 
-main()
+
+if __name__ == "__main__":
+    main()
 
