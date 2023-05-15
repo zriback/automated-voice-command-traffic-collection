@@ -54,6 +54,9 @@ def filter_data(data, auto_delete):
                 if auto_delete:  # delete the .wav and .pcap file
                     os.remove(path)
                     os.remove(f"{os.path.splitext(path)[0]}.pcap")
+        out_file.flush()
+
+    out_file.close()
 
 
 def main():
