@@ -65,6 +65,8 @@ Also creates q.obj, a dictionary relating targets in y to the original question 
 
 Simple Python script to assist in finding all voice assistant IPs used in the data. A large quantity of data is likely to have been captured at different times, and it is possible for the voice assistant device to have assumed a different IP address. This script will scan all the data in the given directory and show all the device IPs used. These can then be fed into `make_dataset.py`.
 
+* Takes the first three octets of the IP addresses's used by the voice assistant. This assumes the first three octets are always the same (class C network). If this is not the case, the script can be easily editted.
+
 ### plot_capture_lengths.py
 
 Python script that creates a histogram of the lengths of all samples in your data. Can be used to help determine the best length to pad everything to (an option provided by the user in `make_dataset.py`). A length of 3,000 is usually good, but this script can assist if conditions are different and you want to determine what the best length value to use might be.
@@ -79,15 +81,19 @@ Python script that creates a histogram of the lengths of all samples in your dat
 1. Choose the commands you want to use. Each one should be put on its own line in `voice_commands.txt`.
 
 2. Use `generate.sh` to generate the `wav_output` directory.
+    
     a. If need be, the voices used and variants generated can be edited in the script itself. By default it uses 2 voices and 9 variants, creating 18 .wav files per command.
 
 3. Use `record.sh` to record the data.
+    
     a. If need be, the number of iterations per command can be edited in the file. By default, 200 iterations are done per command.
 
 4. If there is a lot of noise when recording the output .wav files from the voice assistant, `fix_wav.sh` can be used to improve the quality.
 
 5. Use `filter_data.py` to filter out bad samples from the data capture.
+    
     a. `filter_data_quick.py` can also be used.
+    
     b. `delete_marked_data.py` can also be used in conjunction with `filter_data.py`
 
 6. If need be, figure out the best parameters to use with `make_dataset.py` by using `find_ips.py` and `plot_capture_lengths.py`
