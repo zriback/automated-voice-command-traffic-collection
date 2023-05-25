@@ -5,6 +5,7 @@ import numpy as np
 import os
 import pickle
 
+# Number of questions/directories to process before flushing buffer to X.obj file
 QUESTION_BUFFER_SIZE = 1
 
 # Get info from user
@@ -14,8 +15,7 @@ def get_input():
     if ip_input == "":
         ip_input = "10.163.3.12"
     ip_list = ip_input.split(" ")
-    print("Using ", end="")
-    print(list(ip for ip in ip_list))
+    print("Using", str(ip_list), "\n")
 
     # Get input from the user for capture_output directory
     while not os.path.isdir(data := input("Enter the directory for the capture output data [./capture_output]: ")):
@@ -25,18 +25,30 @@ def get_input():
     while not os.path.isdir(pickle_output := input("Enter the directory for the pickle output [./pickle_output]: ")):
         print("Directory does not exist")
     print("Using", pickle_output, "\n")
-    return ip_list, data, pickle_output
+
+    while True:
+        try:
+            capture_length = input("Enter value for length (number of packets) to force all captures to [3000]: ")
+            if not capture_length:
+                capture_length = '3000'
+            capture_length = int(capture_length)
+            break
+        except TypeError:
+            print("Enter a number")
+    print(f'Using {capture_length}\n')
+
+    return ip_list, data, pickle_output, capture_length
 
 
 # analyze given pcap file through the ip given
-def analyze_pcap(pcap_file, ip_list):
+def analyze_pcap(pcap_file, ip_list, capture_length):
     # Read in the PCAP file using Scapy
     packets = rdpcap(pcap_file)
 
     # 2D array for holding packet information by packet
     features = []
 
-    for i in range(len(packets)):
+    for i in range(min(len(packets), capture_length)):
         packet = packets[i]
 
         # Get the size of the packet
@@ -58,11 +70,15 @@ def analyze_pcap(pcap_file, ip_list):
             iat = 0
         
         features.append([size, iat, direction])
+    # Pad features to required length before returning
+    if len(features) < capture_length:
+        for _ in range(capture_length - len(features)):
+            features.append([0,0,0])
+
     return features
 
-
 # analyze data directory
-def analyze_data(data, ip_list, pickle_output):
+def analyze_data(data, ip_list, pickle_output, capture_length):
     X = []
     # store targets
     y = []
@@ -70,57 +86,37 @@ def analyze_data(data, ip_list, pickle_output):
     questions = {}
     next_target = 0
 
-    # find max length (# of packets) of any capture in the data set
-    print("Finding max length of data captures...")
-    max_length = find_max_length(data)
-    print("Max length is", max_length)
-
     # no. of questions in the current buffer - flushed to .obj file after QUESTION_BUFFER_SIZE questions are read
     question_buf = 0
     for question_dir in os.listdir(data):
         print("Analyzing", question_dir)
-        for pcap in os.listdir(os.path.join(data, question_dir)):
+        for pcap in [i for i in os.listdir(os.path.join(data, question_dir)) if i.endswith('.pcap')]:
             path = os.path.join(data, question_dir, pcap)
-            if not path.endswith(".pcap"):
-                continue
-            
+
             if questions.get(question_dir) is None:
                 questions[question_dir] = next_target
                 next_target += 1
             
-            features = analyze_pcap(path, ip_list)
+            features = analyze_pcap(path, ip_list, capture_length)
             X.append(features)
             y.append(questions[question_dir])
         question_buf += 1
         # After analyzing set number of questions, append to pickled object and clear the buffer
         if question_buf >= QUESTION_BUFFER_SIZE:
-            save_X_data(X, pickle_output, max_length)
+            save_X_data(X, pickle_output)
             question_buf = 0
             X = []
 
     # pickle remaining data in the buffer to the object file
     if question_buf > 0:
-        save_X_data(X, pickle_output, max_length)
+        save_X_data(X, pickle_output)
 
     return X, y, questions
 
-# Format X data into proper ndarray and pickle to .obj file
-def save_X_data(X, pickle_output, max_length):
-    X = make_ndarray(X, max_length)
+# Format X data into proper nd array and pickle to .obj file
+def save_X_data(X, pickle_output):
+    X = np.array(X)
     do_pickle(pickle_output, X, None, None)
-
-
-# find max length (# of packets) of any capture in the data set
-def find_max_length(data):
-    max_length = 0
-    for question_dir in os.listdir(data):
-        for pcap in os.listdir(os.path.join(data, question_dir)):
-            path = os.path.join(data, question_dir, pcap)
-            if not path.endswith(".pcap"):
-                continue
-            if len(rdpcap(path)) > max_length:
-                max_length = len(rdpcap(path))
-    return max_length
             
 
 # pickle the necessary structures so they can be easily transfered over to where ML/DL is done
@@ -141,25 +137,13 @@ def do_pickle(out_dir, X=None, y=None, q=None):
         with open(out_dir+"/q.obj", "+ab") as qObj:
             pickle.dump(q, qObj)
             qObj.close()
-    
-
-# make proper ndarray from multidimensional lists
-def make_ndarray(X, max_length):
-    for capture in X:
-        padding = max_length - len(capture)
-        if padding > 0:
-            for _ in range(padding):
-                capture.append([0,0,0])
-    # Now x has correct dimensions
-    X_array = np.array(X)
-    return X_array
 
 
 def main():
-    ip_list, data, pickle_output = get_input()
+    ip_list, data, pickle_output, capture_length = get_input()
 
     # analyzes data, and puts into 
-    X, y, questions = analyze_data(data, ip_list, pickle_output)
+    X, y, questions = analyze_data(data, ip_list, pickle_output, capture_length)
     
     y = np.array(y)
 
