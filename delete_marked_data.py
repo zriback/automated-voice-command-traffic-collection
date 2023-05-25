@@ -15,6 +15,7 @@ if filename == "":
     filename = DEFAULT_FILENAME
 print("Using", filename, "\n")
 
+files_removed = 0
 with open(filename, 'r') as f:
     for line in f.readlines():
         fields = line.split()
@@ -23,8 +24,9 @@ with open(filename, 'r') as f:
             try:
                 os.remove(fields[1])
                 os.remove(f"{os.path.splitext(fields[1])[0]}.pcap")
+                files_removed += 1
             except OSError:
-                pass
+                print("Coudn't remove file")
 
-print("DONE!")
+print(f"\nDONE! - Filed removed: {files_removed}")
 

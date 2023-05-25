@@ -66,11 +66,15 @@ def filter_data(data, start_dir, start_num, auto_delete):
     question_dirs = os.listdir(data)
     if start_dir == "":  # need to set it to the first one
         start_dir = question_dirs[0]
+    first_question = True
     for question_dir in question_dirs[question_dirs.index(start_dir):]:
         print("Analyzing", question_dir)
-        pcaps = [i for i in os.listdir(os.path.join(data, question_dir)) if i.endswith('.wav')]
-        for pcap in pcaps[pcaps.index(f"cap{start_num}.wav"):]:
-            path = os.path.join(data, question_dir, pcap) 
+        wavs = [i for i in os.listdir(os.path.join(data, question_dir)) if i.endswith('.wav')]
+        if first_question:  # only the first time start at special capture number
+            wavs = wavs[wavs.index(f"cap{start_num}.wav"):]
+            first_question = False
+        for wav in wavs:
+            path = os.path.join(data, question_dir, wav) 
 
             try:       
                 with sr.AudioFile(path) as f:
